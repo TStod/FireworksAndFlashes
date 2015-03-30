@@ -3,26 +3,36 @@
 // perform vector math on xyz movement, only draw in the xy. Position declared as a vector, but drawn as xy coordinates
 
 // calculate xy as normal xy plane where 0 is the ground, then transform y at draw level to account for processings interpreteation of line scanning
-// (y' = -1*(y-SCREEN_HEIGHT))
+// (y' = -1*(y-SCREEN_HEIGHT+1))
 
 PVector GRAVITY = new PVector(0,-0.01,0); // Acceleration due to Gravity
 float AIR_SCALAR = (-0.025); // Acceleration due to Air
 
 int SCREEN_WIDTH = 500;
-int SCREEN_HEIGHT = 500;
+int SCREEN_HEIGHT = 800;
+
+int ROCKET_SPAWN_SPACE = 25;
 
 int ROCKET_TTL = 100;
 int SPARK_TTL = 75;
 int FLASH_TTL = 100;
 int SPARK_BURST_SPEED = 2;
+
+int ROCKET_SIZE = 3;
+int SPARK_SIZE = 2;
 int EXPLOSION_SIZE = 300;
 
-int MAX_FLASH_SIZE = 50;
-int BGCOL = 1;
+int MAX_FLASH_SIZE = max(SCREEN_HEIGHT, SCREEN_WIDTH);
+int FLASH_DIFFUSION = 25;
+int FLASH_GROWTH = 25;
+color BGCOL = #333333;
 
 color RocketColor = #DDDDDD;
 
+color[] palette = {#B1EB00, #53BBF4, #FF85CB, #FF432E, #FFAC00, #982395, #0087CB, #ED1C24, #9C0F5F, #02D0AC};
+
 color randomVibrant() {
+  /*
   float rgb[] = {random(150, 255), random(150, 255), random(150, 255)};
   for (int i = 0; i < rgb.length; i++) {
       if(rgb[i] < 175) {
@@ -30,7 +40,13 @@ color randomVibrant() {
       }
   }
   return color(rgb[0], rgb[1], rgb[2]);
+  */
+  return palette[int(random(0,palette.length))];
   
+}
+
+int drawY(int y) {
+  return -1 * (1 + y - SCREEN_HEIGHT);
 }
 
 protected class Spawner<T> {
@@ -84,11 +100,11 @@ protected class RocketSpawner extends Spawner<Rocket> {
     // if time to spawn new one, spawn new 
     tts--;
     if (tts <= 0) {
-      tts = 25;
+      tts = ROCKET_SPAWN_SPACE;
       PVector p = new PVector(250, 100, 0);
       PVector vr = PVector.random2D();
-      vr.mult(1);
-      PVector v = new PVector(0, 9, 0);
+      vr.setMag(2);
+      PVector v = new PVector(0, 15, 0);
       v.add(vr);
       PVector a = new PVector(0, 0, 0);
       Rocket newRocket = new Rocket(p, v, a);
@@ -259,7 +275,6 @@ protected class Rocket extends Particle {
   public boolean update() {
     ttl--;
     if (velocity.y <= 0) {
-      ttl = 0;
       if (SS == null) {
         SS = new SparkSpawner(position, velocity);
       }
@@ -272,22 +287,15 @@ protected class Rocket extends Particle {
   } // end Rocker::update()
   
   public void draw() {
-    /*
-    int flicker = 0;
-    if(ttl % 2 == 0) {
-      flicker++;
-    }
-    noStroke();
-    fill(RocketColor);
-    int new_y = -1 * int(position.y - SCREEN_HEIGHT);
-    ellipse(int(position.x), new_y, 3+flicker, 3+flicker);
-    */
-    if (ttl > 0) {
-      int new_y = -1 * int(position.y - SCREEN_HEIGHT);
-      fill(RocketColor);
+
+    if (ttl >= 0) {
+
       noStroke();
-      ellipse(int(position.x), new_y, 4, 4);
+      fill(RocketColor);
+      
+      ellipse(int(position.x), drawY(int(position.y)), ROCKET_SIZE, ROCKET_SIZE);
     }
+
     if (SS != null) {
       SS.draw();
     }
@@ -296,7 +304,8 @@ protected class Rocket extends Particle {
 }
 
 protected class Spark extends Particle {
-  color from, to;
+  color from;
+  color to;
   color[] lerpVector; // gradient for sparks
   
   
@@ -304,15 +313,13 @@ protected class Spark extends Particle {
     position.set(p);
     velocity.set(v);
     acceleration.set(a);
-    ttl = SPARK_TTL;
-    
-    lerpVector = new color[ttl];
+    ttl = SPARK_TTL + int(random(0,30));
     from = color1;
     to = color2;
-    float stepSize = 1.0 / SPARK_TTL;
-    float tempStep;
-    for(int i = 0; i < SPARK_TTL; i++) {
-      tempStep = stepSize * i;
+    
+    lerpVector = new color[ttl];
+    float stepSize = 1.0 / float(ttl);
+    for(int i = 0; i < ttl; i++) {
       lerpVector[i] = lerpColor(from, to, stepSize * i);
     }
   } // end Spark::Spark()
@@ -329,10 +336,9 @@ protected class Spark extends Particle {
     // Draw the spark at p
     if (ttl > 0) {
       noStroke();
-      fill(lerpVector[ttl - 1]);
-      fill(from);
-      int new_y = -1 * int(position.y - SCREEN_HEIGHT);
-      ellipse(int(position.x), new_y, 2, 2);
+      fill(lerpVector[ttl]);
+      //fill(from);
+      ellipse(int(position.x), drawY(int(position.y)), SPARK_SIZE, SPARK_SIZE);
     }
   }
 }
@@ -377,37 +383,28 @@ protected class FlashSpawner extends Spawner<Flash>{
 class Flash extends Particle{
   int size;
   int alpha;
-  boolean growing;
  
   Flash() {
     position = new PVector(random(0,SCREEN_WIDTH), random(0,SCREEN_HEIGHT), 0);
     size = 0;
-    alpha = 50;
-    growing = true;
+    alpha = 255;
   } // end Flash()
   
   public boolean update(){
-    if(growing){
-       alpha+=30;
-       if(size < MAX_FLASH_SIZE){
-          size += 10;
-       }else{
-          growing = false;
-       }  
-       return true;
-    }else if(size > 0){
-      alpha -= 30;
-      size -= 10;
-      return true;   
-    }else{
-      return false;
-    }  
+
+      size += FLASH_GROWTH;
+      alpha -= FLASH_DIFFUSION;
+
+      if(size >= MAX_FLASH_SIZE){
+         return false;
+      }
+      return true;
   }
   
   public void draw(){
     //blendMode(ADD);
     fill(250, alpha);
-    ellipse(position.x, position.y, size, size);
+    ellipse(position.x, drawY(int(position.y)), size, size);
   }
 }
 
