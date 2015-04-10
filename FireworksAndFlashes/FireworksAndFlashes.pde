@@ -5,22 +5,22 @@
 // calculate xy as normal xy plane where 0 is the ground, then transform y at draw level to account for processings interpreteation of line scanning
 // (y' = -1*(y-SCREEN_HEIGHT+1))
 
-PVector GRAVITY = new PVector(0,-0.01,0); // Acceleration due to Gravity
-float AIR_SCALAR = (-0.025); // Acceleration due to Air
+PVector GRAVITY = new PVector(0,0,0); // Acceleration due to Gravity
+float AIR_SCALAR = 0; // Acceleration due to Air
 
 int SCREEN_WIDTH = 500;
 int SCREEN_HEIGHT = 800;
 
 int ROCKET_SPAWN_SPACE = 25;
 
-int ROCKET_TTL = 100;
+int ROCKET_TTL = 30;
 int SPARK_TTL = 75;
 int FLASH_TTL = 100;
 int SPARK_BURST_SPEED = 2;
 
 int ROCKET_SIZE = 3;
-int SPARK_SIZE = 2;
-int EXPLOSION_SIZE = 300;
+int SPARK_SIZE = 5;
+int EXPLOSION_SIZE = 8;
 
 int MAX_FLASH_SIZE = max(SCREEN_HEIGHT, SCREEN_WIDTH);
 int FLASH_DIFFUSION = 25;
@@ -103,7 +103,7 @@ protected class RocketSpawner extends Spawner<Rocket> {
       tts = ROCKET_SPAWN_SPACE;
       PVector p = new PVector(250, 100, 0);
       PVector vr = PVector.random2D();
-      vr.setMag(2);
+      vr.setMag(1);
       PVector v = new PVector(0, 15, 0);
       v.add(vr);
       PVector a = new PVector(0, 0, 0);
@@ -171,14 +171,15 @@ protected class SparkSpawner extends Spawner<Spark> {
   public void explode() {
     for (int i = 0; i < EXPLOSION_SIZE; i++) {
       
-      PVector initV = PVector.random3D(); // randomize initial velocity 
+      PVector initV = PVector.fromAngle(i*2*3.14159/EXPLOSION_SIZE); // randomize initial velocity 
+      initV = new PVector(initV.x,initV.y,0.0);
       initV.setMag(SPARK_BURST_SPEED);    // normalize to desired burst speed
       
       if (velocity != null) {
         initV.add(velocity); // add spawners velocity if it exists
       }
       PVector a = new PVector(0, 0, 0);
-      Spark newSpark = new Spark(position, initV, a, sparkColor1, sparkColor2);
+      Spark newSpark = new Spark(position, initV, a, sparkColor1, sparkColor2, false);
       spawn(newSpark);
     }
   } // end explode()
@@ -274,9 +275,9 @@ protected class Rocket extends Particle {
   
   public boolean update() {
     ttl--;
-    if (velocity.y <= 0) {
+    if (velocity.y <= 0 || ttl <= 0) {
       if (SS == null) {
-        SS = new SparkSpawner(position, velocity);
+        SS = new SparkSpawner(position, new PVector(0,0,0));
       }
       return SS.update();
     }
@@ -307,15 +308,21 @@ protected class Spark extends Particle {
   color from;
   color to;
   color[] lerpVector; // gradient for sparks
+  ArrayList<Spark> tail;
   
   
-  Spark(PVector p, PVector v, PVector a, color color1, color color2) {
+  Spark(PVector p, PVector v, PVector a, color color1, color color2, boolean isTail) {
     position.set(p);
     velocity.set(v);
     acceleration.set(a);
-    ttl = SPARK_TTL + int(random(0,30));
+    ttl = SPARK_TTL;
     from = color1;
     to = color2;
+    if(isTail) {
+      tail = null;
+    } else {
+      tail = new ArrayList<Spark>();
+    }
     
     lerpVector = new color[ttl];
     float stepSize = 1.0 / float(ttl);
@@ -327,7 +334,13 @@ protected class Spark extends Particle {
   public boolean update() {
     ttl--;
     if (ttl > 0) {
-      move();
+      if (tail != null) {
+        tail.add(new Spark(position, new PVector(0,0,0), new PVector(0,0,0), lerpVector[ttl], lerpVector[ttl], true));
+        move();
+        for (Spark s : tail) {
+          s.update();
+        }
+      }
       return true;
     }
     return false;
@@ -339,6 +352,11 @@ protected class Spark extends Particle {
       fill(lerpVector[ttl]);
       //fill(from);
       ellipse(int(position.x), drawY(int(position.y)), SPARK_SIZE, SPARK_SIZE);
+    }
+    if(tail != null) {
+      for (int i = 0; i < tail.size() - 5; i++) {
+        tail.get(i).draw();
+      }
     }
   }
 }
