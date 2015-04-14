@@ -1,29 +1,24 @@
-PVector GRAVITY = new PVector(0, 0, 0); // Acceleration due to Gravity
+PVector GRAVITY = new PVector(0, -0.010, 0); // Acceleration due to Gravity
 float AIR_SCALAR = 0; // Acceleration due to Air
 
 int SCREEN_WIDTH = 500;
 int SCREEN_HEIGHT = 800;
 
-int ROCKET_SPAWN_SPACE = 30;
+int ROCKET_SPAWN_SPACE = 50;
 int ROCKET_TTL = 30;
-int ROCKET_SPEED = 9;
+int ROCKET_SPEED = (2*SCREEN_HEIGHT/3) / ROCKET_TTL;
 int ROCKET_SIZE = 6;
 color RocketColor = #DDDDDD;
 
-int SPARK_TTL = 50;
-int SPARK_BURST_SPEED = 5;
-int SPARK_SIZE = 8;
+int SPARK_TTL = 30;
+int SPARK_BURST_SPEED = 4;
+int SPARK_SIZE = 10;
 int EXPLOSION_SIZE = 8;
 color[] SparkPalette = {#B1EB00, #53BBF4, #FF85CB, #FF432E, #FFAC00, #982395, #0087CB, #ED1C24, #9C0F5F, #02D0AC};
 
 int MAX_FLASH_SIZE = max(SCREEN_HEIGHT, SCREEN_WIDTH);
 int FLASH_DIFFUSION = 25;
 int FLASH_GROWTH = 25;
-
-
-ArrayList<Spark> sGarbage = new ArrayList();
-ArrayList<Rocket> rGarbage = new ArrayList();
-ArrayList<Flash> fGarbage = new ArrayList();
 
 color BGCOL = #333333;
 
@@ -120,6 +115,7 @@ protected class Spawner<T extends Particle> {
     AMax = new PVector(10, 10, 10);
     
     children = new ArrayList<T>();
+    garbage = new ArrayList<T>();
   }
   
   // Updates children and collects garbage particles
@@ -130,7 +126,7 @@ protected class Spawner<T extends Particle> {
       }
     }
     for (T g : garbage) {
-      children.remove(g);
+        children.remove(g);
     }
   }
 
@@ -152,9 +148,9 @@ protected class FlashSpawner extends Spawner<Flash>{
   double TimeToFlash;
   
   public FlashSpawner(){
-    garbage = fGarbage;
+    garbage = new ArrayList();
     TimeToFlash = Math.random() * 30 + 50;
-    this.children = new ArrayList<Flash>();
+    children = new ArrayList<Flash>();
   }  
   
   void update(){
@@ -228,7 +224,7 @@ protected class RocketSpawner extends Spawner<Rocket> {
     AMax = new PVector(10, 10, 0);
     
     children = new ArrayList<Rocket>();
-    garbage = rGarbage;
+    garbage = new ArrayList<Rocket>();
     
     tts = 0;
   }
@@ -259,6 +255,7 @@ protected class RocketSpawner extends Spawner<Rocket> {
         newRocket.refactor(p,v,a);
       }
       spawn(newRocket);
+
     }
     collectGarbage();
   } // end RocketSpawner::update()
@@ -294,8 +291,18 @@ protected class Rocket extends Particle {
     position = new PVector(0,0,0);
     velocity = new PVector(0,0,0);
     acceleration = new PVector(0,0,0);
+    
+    position.set(p);
+    velocity.set(v);
+    acceleration.set(a);
     rotation = PI/2 - (float) Math.atan2(velocity.y, velocity.x);
     
+    SS = null;
+    
+    ttl = ROCKET_TTL;
+  } // end Rocket()  
+
+  public void refactor(PVector p, PVector v, PVector a) {
     position.set(p);
     velocity.set(v);
     acceleration.set(a);
@@ -361,7 +368,7 @@ protected class Rocket extends Particle {
     sparkColor2 = randomVibrant();
     
     children = new ArrayList<Spark>();
-    garbage = sGarbage;
+    garbage = new ArrayList<Spark>();
     
     explode();
   } // end SparkSpawner()
@@ -457,9 +464,9 @@ protected class Spark extends Particle {
   public void draw() {
     // Draw the spark at p
     if (ttl > 0) {
+
       noStroke();
       fill(lerpVector[ttl]);
-      //fill(from);
       
       pushMatrix();
       translate(position.x, drawY(int(position.y)));
