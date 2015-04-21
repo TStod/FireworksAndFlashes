@@ -1,3 +1,11 @@
+/*
+Sparks for Fireworks System
+Classes:
+  Spark extends Particle
+  SparkSpawner extends Spawner<Spark>
+Alex Hersh | Teddy Stodard | Nathan Holmes
+*/
+
 int SPARK_TTL = 70;
 int SPARK_BURST_SPEED = 5;
 int SPARK_SIZE = 8;

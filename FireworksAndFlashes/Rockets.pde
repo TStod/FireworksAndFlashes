@@ -1,3 +1,10 @@
+/*
+Rockets for the Fireworks System
+Classes:
+  Rocket extends Particle
+  RocketSpawner extends Spawner<Rocket>
+Alex Hersh | Teddy Stodard | Nathan Holmes
+*/
 
 // how long the rocket will be alive
 int ROCKET_TTL = 60;

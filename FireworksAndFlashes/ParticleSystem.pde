@@ -1,5 +1,33 @@
+/*
+Particle System generic classes
+Classes:
+  Particle
+  Spawner<Particle>
+Functions:
+  randomVibrant
+  drawY
+
+Alex Hersh | Teddy Stodard | Nathan Holmes
+*/
+
+
+//-------------------------------useful functions
+
+//build a palette of colors to choose from
+int[] SparkPalette = {#B1EB00, #53BBF4, #FF85CB, #FF432E, #FFAC00, #982395, #0087CB, #ED1C24, #9C0F5F, #02D0AC};
+int randomVibrant() {
+  return SparkPalette[int(random(0,SparkPalette.length))];
+}
+
+// perform vector math on xyz movement, only draw in the xy. Position declared as a vector, but drawn as xy coordinates
+// calculate xy as normal xy plane where 0 is the ground, then transform y at draw level to account for processings interpreteation of line scanning
+// (y' = -1*(y-SCREEN_HEIGHT+1))
+int drawY(int y) {
+  return -1 * (1 + y - SCREEN_HEIGHT);
+}
 
 //-------------------------------PARTICLE SYSTEM
+
 PVector GRAVITY = new PVector(0, -0.0, 0); // Acceleration due to Gravity (-y direction)
 float AIR_RESIST = -0.03; // Air Resistance (proportional and opposite to velocity)
 

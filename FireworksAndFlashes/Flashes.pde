@@ -1,3 +1,11 @@
+/*
+Camera Flash System
+Classes:
+  Flash extends Particle
+  FlashSpawner extends Spawner<Flash>
+Alex Hersh | Teddy Stodard | Nathan Holmes
+*/
+
 int MAX_FLASH_SIZE = max(SCREEN_HEIGHT, SCREEN_WIDTH);
 int FLASH_DIFFUSION = 25;
 int FLASH_GROWTH = 100;
